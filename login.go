@@ -134,6 +134,10 @@ func (c *Controller) Login(user string, pass string) error {
 		return err
 	}
 
+	if login.ErrorCode != 0 {
+		log.Fatalf("omada login error, code: %d, message: %s\n", login.ErrorCode, login.Msg)
+	}
+
 	token := login.Result.Token
 	c.token = token
 	return nil
