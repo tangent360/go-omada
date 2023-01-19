@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	omada "github.com/dougbw/go-omada"
 )
@@ -10,9 +11,17 @@ import (
 func main() {
 
 	// variables
-	controllerUrl := ""
-	user := ""
-	pass := ""
+	controllerUrl := "https://10.0.0.10"
+	user, present := os.LookupEnv("OMADA_USERNAME")
+	if !present {
+		log.Fatal("⛔ required environment variable not set: OMADA_USERNAME")
+		os.Exit(1)
+	}
+	pass, present := os.LookupEnv("OMADA_PASSWORD")
+	if !present {
+		log.Fatal("⛔ required environment variable not set: OMADA_PASSWORD")
+		os.Exit(1)
+	}
 
 	// setup
 	omada := omada.New(controllerUrl)

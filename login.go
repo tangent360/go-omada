@@ -2,11 +2,14 @@ package omada
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
+	"os"
+	"strconv"
 	"time"
 )
 
@@ -46,9 +49,18 @@ type LoginResponse struct {
 
 func New(baseURL string) Controller {
 	jar, _ := cookiejar.New(nil)
+
+	v, _ := os.LookupEnv("OMADA_DISABLE_HTTPS_VERIFICATION")
+	disableHttpsVerification, _ := strconv.ParseBool(v)
+	fmt.Println(disableHttpsVerification)
+
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: disableHttpsVerification},
+	}
 	httpClient := &http.Client{
-		Jar:     jar,
-		Timeout: (30 * time.Second),
+		Jar:       jar,
+		Timeout:   (30 * time.Second),
+		Transport: transport,
 	}
 
 	return Controller{
