@@ -18,6 +18,7 @@ type Controller struct {
 	baseURL      string
 	controllerId string
 	token        string
+	siteId       string
 }
 
 type ControllerInfo struct {
@@ -52,7 +53,6 @@ func New(baseURL string) Controller {
 
 	v, _ := os.LookupEnv("OMADA_DISABLE_HTTPS_VERIFICATION")
 	disableHttpsVerification, _ := strconv.ParseBool(v)
-	fmt.Println(disableHttpsVerification)
 
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: disableHttpsVerification},
@@ -97,7 +97,7 @@ func (c *Controller) GetControllerInfo() error {
 
 }
 
-func (c *Controller) Login(user string, pass string) error {
+func (c *Controller) Login(user string, pass string, siteName string) error {
 
 	endpoint := c.baseURL + "/" + c.controllerId + "/api/v2/login"
 
@@ -152,6 +152,84 @@ func (c *Controller) Login(user string, pass string) error {
 
 	token := login.Result.Token
 	c.token = token
+
+	c.getSiteId(siteName)
+
 	return nil
+
+}
+
+type currentUserResponse struct {
+	ErrorCode int    `json:"errorCode"`
+	Msg       string `json:"msg"`
+	Result    struct {
+		ID         string `json:"id"`
+		Type       int    `json:"type"`
+		RoleType   int    `json:"roleType"`
+		Name       string `json:"name"`
+		OmadacID   string `json:"omadacId"`
+		Adopt      bool   `json:"adopt"`
+		Manage     bool   `json:"manage"`
+		License    bool   `json:"license"`
+		SiteManage bool   `json:"siteManage"`
+		Privilege  struct {
+			Sites       []Sites
+			LastVisited string `json:"lastVisited"`
+			All         bool   `json:"all"`
+		} `json:"privilege"`
+		Disaster     int  `json:"disaster"`
+		NeedFeedback bool `json:"needFeedback"`
+		DefaultSite  bool `json:"defaultSite"`
+		ForceModify  bool `json:"forceModify"`
+		Dbnormal     bool `json:"dbnormal"`
+	} `json:"result"`
+}
+
+type Sites struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
+}
+
+func (c *Controller) getSiteId(site string) {
+
+	path := "api/v2/users/current"
+	url := fmt.Sprintf("%s/%s/%s", c.baseURL, c.controllerId, path)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Add("Csrf-Token", c.token)
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		err = fmt.Errorf("status code: %d", res.StatusCode)
+		log.Fatal(err)
+	}
+
+	var currentUserResponse currentUserResponse
+	if err := json.NewDecoder(res.Body).Decode(&currentUserResponse); err != nil {
+		// respBody, _ := ioutil.ReadAll(res.Body)
+		// fmt.Println(string(respBody))
+		log.Fatal(err)
+	}
+
+	var siteId string
+	for _, v := range currentUserResponse.Result.Privilege.Sites {
+		if v.Name == site {
+			siteId = v.Key
+		}
+	}
+
+	if siteId == "" {
+		log.Fatalf("site not found: %s", site)
+	}
+
+	c.siteId = siteId
 
 }

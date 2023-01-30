@@ -29,10 +29,8 @@ type Client struct {
 
 func (c *Controller) GetClients() []Client {
 
-	controllerId := c.controllerId
 	token := c.token
-	clientsPath := "api/v2/sites/Default/clients?currentPage=1&currentPageSize=999"
-	url := fmt.Sprintf("%s/%s/%s", c.baseURL, controllerId, clientsPath)
+	url := fmt.Sprintf("%s/%s/api/v2/sites/%s/clients?currentPage=1&currentPageSize=999", c.baseURL, c.controllerId, c.siteId)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Fatal(err)

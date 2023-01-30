@@ -28,16 +28,13 @@ type OmadaNetwork struct {
 
 func (c *Controller) GetNetworks() []OmadaNetwork {
 
-	controllerId := c.controllerId
-	token := c.token
-	clientsPath := "api/v2/sites/Default/setting/lan/networks?currentPage=1&currentPageSize=999"
-	url := fmt.Sprintf("%s/%s/%s", c.baseURL, controllerId, clientsPath)
+	url := fmt.Sprintf("%s/%s/api/v2/sites/%s/setting/lan/networks?currentPage=1&currentPageSize=999", c.baseURL, c.controllerId, c.siteId)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Add("Csrf-Token", token)
+	req.Header.Add("Csrf-Token", c.token)
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
