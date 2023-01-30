@@ -23,6 +23,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	siteName := "Home"
+
 	// setup
 	omada := omada.New(controllerUrl)
 	err := omada.GetControllerInfo()
@@ -31,7 +33,7 @@ func main() {
 	}
 
 	// login
-	err = omada.Login(user, pass)
+	err = omada.Login(user, pass, siteName)
 	if err != nil {
 		log.Fatal(err)
 	}
