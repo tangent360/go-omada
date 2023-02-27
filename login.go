@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"os"
@@ -46,6 +45,37 @@ type LoginResponse struct {
 		RoleType int    `json:"roleType"`
 		Token    string `json:"token"`
 	} `json:"result"`
+}
+
+type currentUserResponse struct {
+	ErrorCode int    `json:"errorCode"`
+	Msg       string `json:"msg"`
+	Result    struct {
+		ID         string `json:"id"`
+		Type       int    `json:"type"`
+		RoleType   int    `json:"roleType"`
+		Name       string `json:"name"`
+		OmadacID   string `json:"omadacId"`
+		Adopt      bool   `json:"adopt"`
+		Manage     bool   `json:"manage"`
+		License    bool   `json:"license"`
+		SiteManage bool   `json:"siteManage"`
+		Privilege  struct {
+			Sites       []Sites
+			LastVisited string `json:"lastVisited"`
+			All         bool   `json:"all"`
+		} `json:"privilege"`
+		Disaster     int  `json:"disaster"`
+		NeedFeedback bool `json:"needFeedback"`
+		DefaultSite  bool `json:"defaultSite"`
+		ForceModify  bool `json:"forceModify"`
+		Dbnormal     bool `json:"dbnormal"`
+	} `json:"result"`
+}
+
+type Sites struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
 }
 
 func New(baseURL string) Controller {
@@ -127,20 +157,6 @@ func (c *Controller) Login(user string, pass string, siteName string) error {
 		return err
 	}
 
-	// todo:
-	// - how long is login session valid for
-	// - when does it need to be refreshed
-	// u, err := url.Parse(c.baseURL)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// domain, _ := url.Parse(u.Hostname())
-	// cookies := c.httpClient.Jar.Cookies(domain)
-	// if len(cookies) == 0 {
-	// 	fmt.Println("No cookies found")
-	// }
-	// fmt.Println(cookies)
-
 	var login LoginResponse
 	if err := json.NewDecoder(res.Body).Decode(&login); err != nil {
 		return err
@@ -153,70 +169,40 @@ func (c *Controller) Login(user string, pass string, siteName string) error {
 	token := login.Result.Token
 	c.token = token
 
-	c.getSiteId(siteName)
+	err = c.getSiteId(siteName)
+	if err != nil {
+		return err
+	}
 
 	return nil
 
 }
 
-type currentUserResponse struct {
-	ErrorCode int    `json:"errorCode"`
-	Msg       string `json:"msg"`
-	Result    struct {
-		ID         string `json:"id"`
-		Type       int    `json:"type"`
-		RoleType   int    `json:"roleType"`
-		Name       string `json:"name"`
-		OmadacID   string `json:"omadacId"`
-		Adopt      bool   `json:"adopt"`
-		Manage     bool   `json:"manage"`
-		License    bool   `json:"license"`
-		SiteManage bool   `json:"siteManage"`
-		Privilege  struct {
-			Sites       []Sites
-			LastVisited string `json:"lastVisited"`
-			All         bool   `json:"all"`
-		} `json:"privilege"`
-		Disaster     int  `json:"disaster"`
-		NeedFeedback bool `json:"needFeedback"`
-		DefaultSite  bool `json:"defaultSite"`
-		ForceModify  bool `json:"forceModify"`
-		Dbnormal     bool `json:"dbnormal"`
-	} `json:"result"`
-}
-
-type Sites struct {
-	Name string `json:"name"`
-	Key  string `json:"key"`
-}
-
-func (c *Controller) getSiteId(site string) {
+func (c *Controller) getSiteId(site string) error {
 
 	path := "api/v2/users/current"
 	url := fmt.Sprintf("%s/%s/%s", c.baseURL, c.controllerId, path)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Add("Csrf-Token", c.token)
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if res.StatusCode != http.StatusOK {
 		err = fmt.Errorf("status code: %d", res.StatusCode)
-		log.Fatal(err)
+		return err
 	}
 
 	var currentUserResponse currentUserResponse
 	if err := json.NewDecoder(res.Body).Decode(&currentUserResponse); err != nil {
-		// respBody, _ := ioutil.ReadAll(res.Body)
-		// fmt.Println(string(respBody))
-		log.Fatal(err)
+		return err
 	}
 
 	var siteId string
@@ -227,9 +213,10 @@ func (c *Controller) getSiteId(site string) {
 	}
 
 	if siteId == "" {
-		log.Fatalf("site not found: %s", site)
+		return fmt.Errorf("site not found: %s", site)
 	}
-
 	c.siteId = siteId
+
+	return nil
 
 }
