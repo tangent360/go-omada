@@ -3,7 +3,6 @@ package omada
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sort"
 )
@@ -139,29 +138,29 @@ type Device struct {
 	DnsName          string
 }
 
-func (c *Controller) GetDevices() []Device {
+func (c *Controller) GetDevices() ([]Device, error) {
 
 	url := fmt.Sprintf("%s/%s/api/v2/sites/%s/devices?currentPage=1&currentPageSize=999", c.baseURL, c.controllerId, c.siteId)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Add("Csrf-Token", c.token)
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	if res.StatusCode != http.StatusOK {
 		err = fmt.Errorf("status code: %d", res.StatusCode)
-		log.Fatal(err)
+		return nil, err
 	}
 
 	var deviceResponse deviceResponse
 	if err := json.NewDecoder(res.Body).Decode(&deviceResponse); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	var devices []Device
@@ -174,6 +173,6 @@ func (c *Controller) GetDevices() []Device {
 		return devices[i].Name < devices[j].Name
 	})
 
-	return devices
+	return devices, nil
 
 }
