@@ -3,7 +3,6 @@ package omada
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sort"
 )
@@ -26,24 +25,24 @@ type OmadaNetwork struct {
 	Subnet string `json:"gatewaySubnet"`
 }
 
-func (c *Controller) GetNetworks() []OmadaNetwork {
+func (c *Controller) GetNetworks() ([]OmadaNetwork, error) {
 
 	url := fmt.Sprintf("%s/%s/api/v2/sites/%s/setting/lan/networks?currentPage=1&currentPageSize=999", c.baseURL, c.controllerId, c.siteId)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Add("Csrf-Token", c.token)
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	if res.StatusCode != http.StatusOK {
 		err = fmt.Errorf("status code: %d", res.StatusCode)
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// respBody, _ := ioutil.ReadAll(res.Body)
@@ -51,7 +50,7 @@ func (c *Controller) GetNetworks() []OmadaNetwork {
 
 	var networkResponse GetNetworksResponse
 	if err := json.NewDecoder(res.Body).Decode(&networkResponse); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	networks := networkResponse.Result.Data
@@ -59,6 +58,6 @@ func (c *Controller) GetNetworks() []OmadaNetwork {
 		return networks[i].Name < networks[j].Name
 	})
 
-	return networks
+	return networks, nil
 
 }

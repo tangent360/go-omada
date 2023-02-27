@@ -39,19 +39,28 @@ func main() {
 	}
 
 	// get clients
-	clients := omada.GetClients()
+	clients, err := omada.GetClients()
+	if err != nil {
+		log.Printf("error getting clients: %v", err)
+	}
 	for _, client := range clients {
 		fmt.Printf("client ip: %s, dnsName: %s, name: %s\n", client.Ip, client.DnsName, client.Name)
 	}
 
 	// get devices
-	devices := omada.GetDevices()
+	devices, err := omada.GetDevices()
+	if err != nil {
+		log.Printf("error getting devices: %v", err)
+	}
 	for _, device := range devices {
 		fmt.Printf("device name: %s, dnsName: %s,  ip: %s\n", device.Name, device.DnsName, device.IP)
 	}
 
 	// get networks
-	networks := omada.GetNetworks()
+	networks, err := omada.GetNetworks()
+	if err != nil {
+		log.Printf("error getting devices: %v", err)
+	}
 	for _, network := range networks {
 		fmt.Printf("network name: %s, subnet: %s, domain: %s\n", network.Name, network.Subnet, network.Domain)
 	}

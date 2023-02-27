@@ -108,7 +108,7 @@ func (c *Controller) Login(user string, pass string, siteName string) error {
 
 	loginJSON, err := json.Marshal(loginBody)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(loginJSON))
@@ -147,7 +147,7 @@ func (c *Controller) Login(user string, pass string, siteName string) error {
 	}
 
 	if login.ErrorCode != 0 {
-		log.Fatalf("omada login error, code: %d, message: %s\n", login.ErrorCode, login.Msg)
+		return fmt.Errorf("omada login error, code: %d, message: %s", login.ErrorCode, login.Msg)
 	}
 
 	token := login.Result.Token
