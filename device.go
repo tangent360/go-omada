@@ -176,3 +176,44 @@ func (c *Controller) GetDevices() ([]Device, error) {
 	return devices, nil
 
 }
+
+func (c *Controller) GetAllDevices() ([]Device, error) {
+
+	var allDevices []Device
+	for _, v := range c.allSiteIds {
+		url := fmt.Sprintf("%s/%s/api/v2/sites/%s/devices?currentPage=1&currentPageSize=999", c.baseURL, c.controllerId, v)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Accept", "application/json")
+		req.Header.Add("Csrf-Token", c.token)
+
+		res, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		if res.StatusCode != http.StatusOK {
+			err = fmt.Errorf("status code: %d", res.StatusCode)
+			return nil, err
+		}
+
+		var deviceResponse deviceResponse
+		if err := json.NewDecoder(res.Body).Decode(&deviceResponse); err != nil {
+			return nil, err
+		}
+
+		for _, device := range deviceResponse.Result {
+			device.DnsName = makeDNSSafe(device.Name)
+			allDevices = append(allDevices, device)
+		}
+
+		sort.Slice(allDevices, func(i, j int) bool {
+			return allDevices[i].Name < allDevices[j].Name
+		})
+	}
+
+	return allDevices, nil
+
+}

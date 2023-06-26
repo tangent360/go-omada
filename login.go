@@ -18,6 +18,7 @@ type Controller struct {
 	controllerId string
 	token        string
 	siteId       string
+	allSiteIds   []string
 }
 
 type ControllerInfo struct {
@@ -174,6 +175,11 @@ func (c *Controller) Login(user string, pass string, siteName string) error {
 		return err
 	}
 
+	err = c.getAllSiteIds()
+	if err != nil {
+		return err
+	}
+
 	return nil
 
 }
@@ -216,6 +222,49 @@ func (c *Controller) getSiteId(site string) error {
 		return fmt.Errorf("site not found: %s", site)
 	}
 	c.siteId = siteId
+
+	return nil
+
+}
+
+func (c *Controller) getAllSiteIds() error {
+
+	path := "api/v2/users/current"
+	url := fmt.Sprintf("%s/%s/%s", c.baseURL, c.controllerId, path)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Add("Csrf-Token", c.token)
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		err = fmt.Errorf("status code: %d", res.StatusCode)
+		return err
+	}
+
+	var currentUserResponse currentUserResponse
+	if err := json.NewDecoder(res.Body).Decode(&currentUserResponse); err != nil {
+		return err
+	}
+
+	var allSiteIds []string
+	for _, v := range currentUserResponse.Result.Privilege.Sites {
+		allSiteIds = append(allSiteIds, v.Key)
+	}
+
+	if len(allSiteIds) == 0 {
+		return fmt.Errorf("getAllSiteIds Error - no sites found")
+	}
+
+	c.allSiteIds = allSiteIds
+	fmt.Printf("getallSiteIds:  lne - %d, %s\n", len(allSiteIds), allSiteIds)
 
 	return nil
 

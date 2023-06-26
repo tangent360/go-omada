@@ -61,3 +61,45 @@ func (c *Controller) GetNetworks() ([]OmadaNetwork, error) {
 	return networks, nil
 
 }
+
+func (c *Controller) GetAllNetworks() ([]OmadaNetwork, error) {
+
+	var allNetworks []OmadaNetwork
+
+	for _, v := range c.allSiteIds {
+		url := fmt.Sprintf("%s/%s/api/v2/sites/%s/setting/lan/networks?currentPage=1&currentPageSize=999", c.baseURL, c.controllerId, v)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Accept", "application/json")
+		req.Header.Add("Csrf-Token", c.token)
+
+		res, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		if res.StatusCode != http.StatusOK {
+			err = fmt.Errorf("status code: %d", res.StatusCode)
+			return nil, err
+		}
+
+		// respBody, _ := ioutil.ReadAll(res.Body)
+		// fmt.Println(string(respBody))
+
+		var networkResponse GetNetworksResponse
+		if err := json.NewDecoder(res.Body).Decode(&networkResponse); err != nil {
+			return nil, err
+		}
+
+		networks := networkResponse.Result.Data
+		allNetworks = append(allNetworks, networks...)
+
+		sort.Slice(allNetworks, func(i, j int) bool {
+			return allNetworks[i].Name < allNetworks[j].Name
+		})
+
+	}
+	return allNetworks, nil
+}
